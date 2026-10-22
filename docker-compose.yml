@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mms-postgres
+    environment:
+      POSTGRES_DB: mms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - mms-pgdata:/var/lib/postgresql/data
+
+volumes:
+  mms-pgdata:
