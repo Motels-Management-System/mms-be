@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IDateTimeProvi
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<MaintenanceRequest> MaintenanceRequests => Set<MaintenanceRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
