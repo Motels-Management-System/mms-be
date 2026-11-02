@@ -136,13 +136,13 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [x] `GET /api/users` (A), `POST /api/users` (A, tạo Staff), `PUT /api/users/{id}/roles` (A), `PATCH /api/users/{id}/active` (A, khóa/mở)
 
 ### Giai đoạn 2: Danh mục
-- [ ] Loại phòng: `GET /api/room-types` (`*`), `GET /api/room-types/{id}` (`*`), `POST`, `PUT /{id}`, `DELETE /{id}` (A; không xóa nếu còn phòng thuộc loại)
-- [ ] Tiện nghi: `GET /api/amenities` (`*`), `POST`, `PUT /{id}`, `DELETE /{id}` (A)
-- [ ] Phòng: `GET /api/rooms` (`*`; lọc `status`, `roomTypeId`, `floor`, `keyword`, phân trang)
-- [ ] `GET /api/rooms/{id}` (`*`): kèm loại phòng, tiện nghi; S/A thấy thêm hợp đồng hiện tại
-- [ ] `POST /api/rooms`, `PUT /api/rooms/{id}` (A), `PUT /api/rooms/{id}/amenities` (A)
-- [ ] `POST /api/rooms/{id}/status` (S): chuyển `Maintenance` ⇄ `Available` theo `Room.ChangeStatus`
-- [ ] Người thuê: `GET /api/tenants` (S; tìm theo tên/SĐT, phân trang), `GET /api/tenants/{id}` (S), `POST`, `PUT /{id}` (S), `GET /api/tenants/{id}/contracts` (S, lịch sử thuê)
+- [x] Loại phòng: `GET /api/room-types` (`*`), `GET /api/room-types/{id}` (`*`), `POST`, `PUT /{id}`, `DELETE /{id}` (A; không xóa nếu còn phòng thuộc loại)
+- [x] Tiện nghi: `GET /api/amenities` (`*`), `POST`, `PUT /{id}`, `DELETE /{id}` (A)
+- [x] Phòng: `GET /api/rooms` (`*`; lọc `status`, `roomTypeId`, `floor`, `keyword`, phân trang)
+- [x] `GET /api/rooms/{id}` (`*`): kèm loại phòng, tiện nghi; S/A thấy thêm hợp đồng hiện tại
+- [x] `POST /api/rooms`, `PUT /api/rooms/{id}` (A), `PUT /api/rooms/{id}/amenities` (A)
+- [x] `POST /api/rooms/{id}/status` (S): chuyển `Maintenance` ⇄ `Available` theo `Room.ChangeStatus`
+- [x] Người thuê: `GET /api/tenants` (S; tìm theo tên/SĐT, phân trang), `GET /api/tenants/{id}` (S), `POST`, `PUT /{id}` (S), `GET /api/tenants/{id}/contracts` (S, lịch sử thuê)
 
 ### Giai đoạn 3: Lõi nghiệp vụ (ghi điểm CV)
 - [ ] **Tìm phòng trống** `GET /api/rooms/available?from=&to=&guests=&roomTypeId=&amenityIds=` (`*`). Phòng khả dụng khi: `Status != Maintenance`, không có hợp đồng chồng `[from, to)` (`NOT EXISTS`), không có giữ phòng còn hiệu lực, `MaxOccupancy >= guests`. Có index hỗ trợ, đo `EXPLAIN ANALYZE`
@@ -250,5 +250,7 @@ dotnet ef migrations remove -p src/Mms.Infrastructure -s src/Mms.Api   # chỉ k
 # Chuỗi kết nối thật (không commit)
 dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=MotelManagementSystem;Username=postgres;Password=..." --project src/Mms.Api
 ```
+
+Integration test dùng Testcontainers, cần Docker daemon đang chạy. Testcontainers 4.16 gọi Docker API 1.44; nếu engine cũ (Docker Desktop 20.10 chỉ hỗ trợ 1.41) thì đặt `DOCKER_API_VERSION=1.41` khi chạy `dotnet test`.
 
 Cảnh báo "EF tools version 9.0.4 is older than the runtime 9.0.x" là bình thường, bỏ qua.

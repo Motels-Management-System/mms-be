@@ -55,4 +55,27 @@ public class Room : AuditableEntity
         if (_amenities.Any(a => a.AmenityId == amenityId)) return;
         _amenities.Add(new RoomAmenity(Id, amenityId));
     }
+
+    public void Update(string code, int floor, Guid roomTypeId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        if (roomTypeId == Guid.Empty)
+            throw new ArgumentException("Loại phòng không hợp lệ.", nameof(roomTypeId));
+
+        Code = code.Trim().ToUpperInvariant();
+        Floor = floor;
+        RoomTypeId = roomTypeId;
+    }
+
+    public void UpdateAmenities(IEnumerable<Guid> amenityIds)
+    {
+        _amenities.Clear();
+        foreach (var id in amenityIds.Distinct())
+        {
+            if (id != Guid.Empty)
+            {
+                _amenities.Add(new RoomAmenity(Id, id));
+            }
+        }
+    }
 }

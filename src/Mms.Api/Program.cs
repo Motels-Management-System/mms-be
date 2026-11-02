@@ -85,7 +85,11 @@ try
         app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MMS API v1"));
     }
 
-    app.UseHttpsRedirection();
+    // Profile http chỉ bind một endpoint nên không có cổng https để chuyển hướng tới.
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHttpsRedirection();
+    }
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
@@ -110,3 +114,7 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Lớp Program mặc định là internal với top-level statements; khai báo public để
+// WebApplicationFactory của integration test tham chiếu được.
+public partial class Program;

@@ -13,4 +13,10 @@ public class Amenity : AuditableEntity
     }
 
     public string Name { get; private set; } = default!;
+
+    public void Update(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name.Trim();
+    }
 }
