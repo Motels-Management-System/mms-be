@@ -80,9 +80,9 @@ tests/
 | `DomainException` | 422 | `BUSINESS_RULE_VIOLATION` |
 | `NotFoundException` | 404 | `NOT_FOUND` |
 | `ConflictException`, Postgres `23505` (trùng unique) | 409 | `DUPLICATE` |
-| Postgres `23P01` (exclusion constraint) | 409 | `ROOM_DATE_OVERLAP` |
+| `RoomDateOverlapException` (con của `ConflictException`), Postgres `23P01` (exclusion constraint) | 409 | `ROOM_DATE_OVERLAP` |
 | `DbUpdateConcurrencyException` | 409 | `CONCURRENCY_CONFLICT` |
-| Chưa đăng nhập / sai quyền | 401 / 403 | (mặc định) |
+| Chưa đăng nhập / sai quyền | 401 / 403 | `UNAUTHORIZED` / `FORBIDDEN` |
 
 - Mã trạng thái thành công: `201` + `Location` khi tạo, `200` khi đọc/sửa, `204` khi xóa/hành động không trả dữ liệu.
 
@@ -145,23 +145,23 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [x] Người thuê: `GET /api/tenants` (S; tìm theo tên/SĐT, phân trang), `GET /api/tenants/{id}` (S), `POST`, `PUT /{id}` (S), `GET /api/tenants/{id}/contracts` (S, lịch sử thuê)
 
 ### Giai đoạn 3: Lõi nghiệp vụ (ghi điểm CV)
-- [ ] **Tìm phòng trống** `GET /api/rooms/available?from=&to=&guests=&roomTypeId=&amenityIds=` (`*`). Phòng khả dụng khi: `Status != Maintenance`, không có hợp đồng chồng `[from, to)` (`NOT EXISTS`), không có giữ phòng còn hiệu lực, `MaxOccupancy >= guests`. Có index hỗ trợ, đo `EXPLAIN ANALYZE`
-- [ ] Giữ phòng: `POST /api/reservations` (C, S): kiểm tra phòng còn trống, tạo `Pending` hết hạn sau `ReservationHoldHours`, bắt `23505` khi trùng giữ phòng
-- [ ] `GET /api/reservations` (S; lọc `status`), `GET /api/reservations/me` (C), `GET /api/reservations/{id}` (S hoặc chủ sở hữu)
-- [ ] `POST /api/reservations/{id}/confirm` (S): phòng → `Reserved`
-- [ ] `POST /api/reservations/{id}/cancel` (S hoặc chủ sở hữu): phòng → `Available`
-- [ ] **Tạo hợp đồng** `POST /api/contracts` (S): nhận `roomId`, `startDate`, `months`, `tenants[]` (có đúng 1 người đại diện), `reservationId?`. Kiểm tra phòng không bảo trì, số người ≤ sức chứa, `months ≥ MinContractMonths`; chuyển giữ phòng thành `ConvertedToContract` trong cùng transaction; bắt `23P01` → 409
-- [ ] `GET /api/contracts` (S; lọc `status`, `roomId`, `expiringWithinDays`), `GET /api/contracts/{id}` (S, hoặc C nếu là người ở)
-- [ ] `GET /api/contracts/me` (C): hợp đồng của mình kèm `daysRemaining`, `expiryLevel`
-- [ ] `POST /api/contracts/{id}/tenants` (S), `DELETE /api/contracts/{id}/tenants/{tenantId}` (S; cần thêm `Contract.RemoveTenant` vào Domain)
-- [ ] **Check-in** `POST /api/contracts/{id}/check-in` (S): chỉ khi hôm nay ≥ `StartDate` và phòng `Available`/`Reserved`; `Activate()`, phòng → `Occupied`, ghi biên bản bàn giao
-- [ ] **Gia hạn** `POST /api/contracts/{id}/renew` (S): tạo hợp đồng Draft nối tiếp đúng `EndDate` (`Contract.CreateRenewal`); cần thêm cột `RenewedFromContractId` (nullable) vào `Contract`
-- [ ] **Chấm dứt sớm** `POST /api/contracts/{id}/terminate` (S): `terminationDate ≥ hôm nay + EarlyTerminationNoticeDays`
-- [ ] **Check-out** `POST /api/contracts/{id}/check-out` (S): hợp đồng phải đã `Expired`/`Terminated`; ghi biên bản (tình trạng phòng, số chìa khóa, ghi chú); phòng → `Available` hoặc `Maintenance`
-- [ ] **Đổi phòng** `POST /api/contracts/{id}/change-room` (S): phòng mới phải trống trong toàn bộ thời gian còn lại
-- [ ] Entity + bảng `HandoverRecords` (`ContractId`, `Type` CheckIn/CheckOut, `RoomCondition`, `KeyCount`, `Notes`, `CreatedByUserId`)
-- [ ] **Integration test 50 request song song** tạo hợp đồng cùng phòng → 1 thành công, 49 `409`
-- [ ] Unit test các ca biên: cộng tháng 29/30/31, năm nhuận, gia hạn nối tiếp, kề nhau không chồng lấn
+- [x] **Tìm phòng trống** `GET /api/rooms/available?from=&to=&guests=&roomTypeId=&amenityIds=` (`*`). Phòng khả dụng khi: `Status != Maintenance`, không có hợp đồng chồng `[from, to)` (`NOT EXISTS`), không có giữ phòng còn hiệu lực, `MaxOccupancy >= guests`. Có index hỗ trợ, đo `EXPLAIN ANALYZE`
+- [x] Giữ phòng: `POST /api/reservations` (C, S): kiểm tra phòng còn trống, tạo `Pending` hết hạn sau `ReservationHoldHours`, bắt `23505` khi trùng giữ phòng
+- [x] `GET /api/reservations` (S; lọc `status`), `GET /api/reservations/me` (C), `GET /api/reservations/{id}` (S hoặc chủ sở hữu)
+- [x] `POST /api/reservations/{id}/confirm` (S): phòng → `Reserved`
+- [x] `POST /api/reservations/{id}/cancel` (S hoặc chủ sở hữu): phòng → `Available`
+- [x] **Tạo hợp đồng** `POST /api/contracts` (S): nhận `roomId`, `startDate`, `months`, `tenants[]` (có đúng 1 người đại diện), `reservationId?`. Kiểm tra phòng không bảo trì, số người ≤ sức chứa, `months ≥ MinContractMonths`; chuyển giữ phòng thành `ConvertedToContract` trong cùng transaction; bắt `23P01` → 409
+- [x] `GET /api/contracts` (S; lọc `status`, `roomId`, `expiringWithinDays`), `GET /api/contracts/{id}` (S, hoặc C nếu là người ở)
+- [x] `GET /api/contracts/me` (C): hợp đồng của mình kèm `daysRemaining`, `expiryLevel`
+- [x] `POST /api/contracts/{id}/tenants` (S), `DELETE /api/contracts/{id}/tenants/{tenantId}` (S; cần thêm `Contract.RemoveTenant` vào Domain)
+- [x] **Check-in** `POST /api/contracts/{id}/check-in` (S): chỉ khi hôm nay ≥ `StartDate` và phòng `Available`/`Reserved`; `Activate()`, phòng → `Occupied`, ghi biên bản bàn giao
+- [x] **Gia hạn** `POST /api/contracts/{id}/renew` (S): tạo hợp đồng Draft nối tiếp đúng `EndDate` (`Contract.CreateRenewal`); cần thêm cột `RenewedFromContractId` (nullable) vào `Contract`
+- [x] **Chấm dứt sớm** `POST /api/contracts/{id}/terminate` (S): `terminationDate ≥ hôm nay + EarlyTerminationNoticeDays`
+- [x] **Check-out** `POST /api/contracts/{id}/check-out` (S): hợp đồng phải đã `Expired`/`Terminated`; ghi biên bản (tình trạng phòng, số chìa khóa, ghi chú); phòng → `Available` hoặc `Maintenance`
+- [x] **Đổi phòng** `POST /api/contracts/{id}/change-room` (S): phòng mới phải trống trong toàn bộ thời gian còn lại
+- [x] Entity + bảng `HandoverRecords` (`ContractId`, `Type` CheckIn/CheckOut, `RoomCondition`, `KeyCount`, `Notes`, `CreatedByUserId`)
+- [x] **Integration test 50 request song song** tạo hợp đồng cùng phòng → 1 thành công, 49 `409`
+- [x] Unit test các ca biên: cộng tháng 29/30/31, năm nhuận, gia hạn nối tiếp, kề nhau không chồng lấn
 
 ### Giai đoạn 4: Vận hành
 - [ ] Chỉ số điện nước: `POST /api/rooms/{roomId}/meter-readings` (S; chỉ số mới ≥ cũ trừ khi thay đồng hồ), `GET /api/rooms/{roomId}/meter-readings` (S)

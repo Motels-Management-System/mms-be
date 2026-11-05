@@ -19,6 +19,7 @@ internal sealed class ContractConfiguration : IEntityTypeConfiguration<Contract>
 
         b.HasOne<Room>().WithMany().HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Reservation>().WithMany().HasForeignKey(x => x.ReservationId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Contract>().WithMany().HasForeignKey(x => x.RenewedFromContractId).OnDelete(DeleteBehavior.Restrict);
 
         b.HasMany(x => x.Tenants)
             .WithOne()

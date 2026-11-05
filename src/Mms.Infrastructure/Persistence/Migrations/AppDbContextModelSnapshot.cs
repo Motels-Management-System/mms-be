@@ -229,6 +229,9 @@ namespace Mms.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
 
+                    b.Property<Guid?>("RenewedFromContractId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ReservationId")
                         .HasColumnType("uuid");
 
@@ -253,6 +256,8 @@ namespace Mms.Infrastructure.Persistence.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RenewedFromContractId");
 
                     b.HasIndex("ReservationId");
 
@@ -282,6 +287,49 @@ namespace Mms.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("ContractTenants", (string)null);
+                });
+
+            modelBuilder.Entity("Mms.Domain.Entities.HandoverRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("KeyCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("RoomCondition")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ContractId", "Type");
+
+                    b.ToTable("HandoverRecords", (string)null);
                 });
 
             modelBuilder.Entity("Mms.Domain.Entities.MaintenanceRequest", b =>
@@ -689,6 +737,11 @@ namespace Mms.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Mms.Domain.Entities.Contract", b =>
                 {
+                    b.HasOne("Mms.Domain.Entities.Contract", null)
+                        .WithMany()
+                        .HasForeignKey("RenewedFromContractId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Mms.Domain.Entities.Reservation", null)
                         .WithMany()
                         .HasForeignKey("ReservationId")
@@ -712,6 +765,21 @@ namespace Mms.Infrastructure.Persistence.Migrations
                     b.HasOne("Mms.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Mms.Domain.Entities.HandoverRecord", b =>
+                {
+                    b.HasOne("Mms.Domain.Entities.Contract", null)
+                        .WithMany()
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Mms.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

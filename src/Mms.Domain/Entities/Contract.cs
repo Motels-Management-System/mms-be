@@ -11,10 +11,11 @@ public class Contract : AuditableEntity
 
     private Contract() { }
 
-    public Contract(Guid roomId, DateRange period, Guid? reservationId = null)
+    public Contract(Guid roomId, DateRange period, Guid? reservationId = null, Guid? renewedFromContractId = null)
     {
         RoomId = roomId;
         ReservationId = reservationId;
+        RenewedFromContractId = renewedFromContractId;
         StartDate = period.Start;
         EndDate = period.End;
         Status = ContractStatus.Draft;
@@ -22,6 +23,9 @@ public class Contract : AuditableEntity
 
     public Guid RoomId { get; private set; }
     public Guid? ReservationId { get; private set; }
+
+    /// <summary>Hợp đồng gốc nếu đây là lần gia hạn (nối tiếp đúng EndDate của hợp đồng gốc).</summary>
+    public Guid? RenewedFromContractId { get; private set; }
 
     /// <summary>Ngày bắt đầu (tính cả ngày này).</summary>
     public DateOnly StartDate { get; private set; }
@@ -37,6 +41,19 @@ public class Contract : AuditableEntity
 
     /// <summary>"Sắp hết hạn" là giá trị tính toán từ ngày hiện tại, không lưu thành cột.</summary>
     public int DaysRemaining(DateOnly today) => Period.DaysUntilEnd(today);
+
+    public ExpiryLevel GetExpiryLevel(DateOnly today)
+        => ExpiryLevelOf(Status, today, EndDate);
+
+    public static ExpiryLevel ExpiryLevelOf(ContractStatus status, DateOnly today, DateOnly endDate)
+    {
+        if (status != ContractStatus.Active) return ExpiryLevel.None;
+
+        var days = endDate.DayNumber - today.DayNumber;
+        if (days is >= 0 and <= 7) return ExpiryLevel.Red;
+        if (days is >= 0 and <= 30) return ExpiryLevel.Yellow;
+        return ExpiryLevel.None;
+    }
 
     public bool IsExpiringWithin(DateOnly today, int days)
         => Status == ContractStatus.Active && DaysRemaining(today) is >= 0 && DaysRemaining(today) <= days;
@@ -100,10 +117,37 @@ public class Contract : AuditableEntity
         if (Status != ContractStatus.Active)
             throw new DomainException("Chỉ gia hạn được hợp đồng đang Active.");
 
-        var renewal = new Contract(RoomId, DateRange.FromMonths(EndDate, months));
+        var renewal = new Contract(RoomId, DateRange.FromMonths(EndDate, months), renewedFromContractId: Id);
         foreach (var t in _tenants)
             renewal._tenants.Add(new ContractTenant(renewal.Id, t.TenantId, t.IsPrimary));
 
         return renewal;
+    }
+
+    /// <summary>Bớt người ở khỏi hợp đồng Draft/Active. Không được xóa người đại diện.</summary>
+    public void RemoveTenant(Guid tenantId)
+    {
+        if (Status is not (ContractStatus.Draft or ContractStatus.Active))
+            throw new DomainException("Không thể xóa người ở khỏi hợp đồng đã kết thúc.");
+
+        var tenant = _tenants.FirstOrDefault(t => t.TenantId == tenantId)
+            ?? throw new DomainException("Người này không có trong hợp đồng.");
+
+        if (tenant.IsPrimary)
+            throw new DomainException("Không thể xóa người đại diện khỏi hợp đồng.");
+
+        _tenants.Remove(tenant);
+    }
+
+    /// <summary>Đổi phòng cho hợp đồng đang Active: thời gian còn lại chuyển sang phòng mới.</summary>
+    public void ChangeRoom(Guid newRoomId)
+    {
+        if (Status != ContractStatus.Active)
+            throw new DomainException("Chỉ đổi phòng được cho hợp đồng đang Active.");
+
+        if (newRoomId == RoomId)
+            throw new DomainException("Phòng mới phải khác phòng hiện tại.");
+
+        RoomId = newRoomId;
     }
 }
