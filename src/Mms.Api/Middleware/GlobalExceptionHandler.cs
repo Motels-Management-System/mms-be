@@ -31,6 +31,13 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
                 ueexMessage(uex),
                 null as object),
 
+            ForbiddenException fex => (
+                StatusCodes.Status403Forbidden,
+                "FORBIDDEN",
+                "Không đủ quyền.",
+                fex.Message,
+                null as object),
+
             DomainException dex => (
                 StatusCodes.Status422UnprocessableEntity,
                 "BUSINESS_RULE_VIOLATION",
@@ -43,6 +50,13 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
                 "NOT_FOUND",
                 "Không tìm thấy.",
                 nex.Message,
+                null as object),
+
+            ConflictException cex when cex is RoomDateOverlapException => (
+                StatusCodes.Status409Conflict,
+                "ROOM_DATE_OVERLAP",
+                "Trùng lịch phòng.",
+                cex.Message,
                 null as object),
 
             ConflictException cex => (

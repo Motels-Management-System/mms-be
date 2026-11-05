@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, IDateTimeProvi
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractTenant> ContractTenants => Set<ContractTenant>();
+    public DbSet<HandoverRecord> HandoverRecords => Set<HandoverRecord>();
     public DbSet<MeterReading> MeterReadings => Set<MeterReading>();
     public DbSet<MaintenanceRequest> MaintenanceRequests => Set<MaintenanceRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

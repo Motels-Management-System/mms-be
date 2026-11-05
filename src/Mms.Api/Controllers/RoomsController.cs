@@ -31,6 +31,25 @@ public class RoomsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("available")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PagedResult<RoomDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAvailableRooms(
+        [FromQuery] DateOnly from,
+        [FromQuery] DateOnly to,
+        [FromQuery] int guests = 1,
+        [FromQuery] Guid? roomTypeId = null,
+        [FromQuery] IReadOnlyList<Guid>? amenityIds = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromServices] IQueryHandler<GetAvailableRoomsQuery, PagedResult<RoomDto>> handler = default!,
+        CancellationToken ct = default)
+    {
+        var query = new GetAvailableRoomsQuery(from, to, guests, roomTypeId, amenityIds, page, pageSize);
+        var result = await handler.HandleAsync(query, ct);
+        return Ok(result);
+    }
+
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(RoomDetailDto), StatusCodes.Status200OK)]

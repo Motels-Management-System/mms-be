@@ -14,6 +14,7 @@ public interface IAppDbContext
     DbSet<Reservation> Reservations { get; }
     DbSet<Contract> Contracts { get; }
     DbSet<ContractTenant> ContractTenants { get; }
+    DbSet<HandoverRecord> HandoverRecords { get; }
     DbSet<MeterReading> MeterReadings { get; }
     DbSet<MaintenanceRequest> MaintenanceRequests { get; }
     DbSet<AuditLog> AuditLogs { get; }
