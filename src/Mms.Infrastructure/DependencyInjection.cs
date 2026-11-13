@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Mms.Application.Abstractions;
 using Mms.Infrastructure.Identity;
 using Mms.Infrastructure.Persistence;
+using Mms.Infrastructure.Persistence.Interceptors;
 using Mms.Infrastructure.Services;
 
 namespace Mms.Infrastructure;
@@ -21,8 +22,17 @@ public static class DependencyInjection
         // DateTimeProvider
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 
+        // HttpCurrentUserProvider cho AuditSaveChangesInterceptor
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserProvider, HttpCurrentUserProvider>();
+
         // EF Core + PostgreSQL
-        services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseNpgsql(connectionString);
+            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+        });
+        services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         // ASP.NET Identity

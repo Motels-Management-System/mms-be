@@ -3,6 +3,7 @@ using Mms.Api.Middleware;
 using Mms.Application;
 using Mms.Application.Common;
 using Mms.Infrastructure;
+using Mms.Infrastructure.BackgroundJobs;
 using Mms.Infrastructure.Identity;
 using Serilog;
 
@@ -72,6 +73,14 @@ try
         builder.Configuration.GetSection(RentalOptions.SectionName));
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+
+    // Integration test chạy ở môi trường Testing và gọi thẳng handler hết hạn,
+    // nên background job không đăng ký ở đó (tránh timer can thiệp lúc đang assert).
+    if (!builder.Environment.EnvironmentName.Equals("Testing", StringComparison.Ordinal))
+    {
+        builder.Services.AddHostedService<ReservationExpiryJob>();
+        builder.Services.AddHostedService<ContractExpiryJob>();
+    }
 
     var app = builder.Build();
 

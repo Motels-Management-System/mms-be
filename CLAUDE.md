@@ -41,7 +41,7 @@ tests/
 
 **Hướng phụ thuộc (không được vi phạm):** `Api → Application, Infrastructure`; `Infrastructure → Application → Domain`. Domain không tham chiếu gì. Application không tham chiếu Infrastructure hay Api. Controller không dùng `AppDbContext` trực tiếp, chỉ gọi handler.
 
-**Trạng thái hiện tại (đã xong):** cấu trúc solution, toàn bộ entity Domain, `AppDbContext` + configurations, 2 migration (`Initial`, `AddNoOverlapConstraint`), `AddApplication()` (mới đăng ký validator), `AddInfrastructure(connectionString)` đã nối vào `Program.cs`.
+**Trạng thái hiện tại (đã xong):** cấu trúc solution, toàn bộ entity Domain, `AppDbContext` + configurations + `AuditSaveChangesInterceptor`, 4 migration (`Initial`, `AddNoOverlapConstraint`, `AddRefreshTokens`, `AddHandoverRecordsAndRenewedFromContract`), `AddApplication()` (đăng ký validator + handler), `AddInfrastructure(connectionString)` đã nối vào `Program.cs`, background job hết hạn trong `Infrastructure/BackgroundJobs` (không đăng ký ở môi trường Testing, test gọi thẳng handler).
 
 ## 4. Quy trình làm một tính năng
 
@@ -89,7 +89,7 @@ tests/
 ### 5.4 Application
 - Handler là class thường, **không dùng MediatR**. Tạo interface trong `Application/Abstractions/Messaging`:
   `ICommandHandler<TCommand, TResult>` và `IQueryHandler<TQuery, TResult>` với `Task<TResult> HandleAsync(TRequest, CancellationToken)`. Đăng ký tự động bằng quét assembly trong `AddApplication()` (viết khi làm use case đầu tiên). Controller inject trực tiếp handler cần dùng.
-- Mỗi command có `AbstractValidator<T>`; handler gọi `await validator.ValidateAndThrowAsync(command, ct)` đầu tiên.
+- Mỗi command có `AbstractValidator<T>`; handler gọi `await validator.ValidateAndThrowAsync(command, ct)` đầu tiên. Ngoại lệ: command nội bộ của background job không có dữ liệu người dùng nên không cần validator.
 - Truy vấn đọc dùng `AsNoTracking()` và `Select` thẳng sang DTO (không `Include` rồi map thủ công).
 - Truy vấn báo cáo phức tạp (`generate_series`, window function) viết SQL thuần trong `Infrastructure/Reports` bằng `Database.SqlQuery<T>`, expose qua interface `IReportQueries` ở Application.
 - Cấu hình nghiệp vụ lấy từ `IOptions<RentalOptions>` (mục 8), không hardcode.
@@ -164,14 +164,14 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [x] Unit test các ca biên: cộng tháng 29/30/31, năm nhuận, gia hạn nối tiếp, kề nhau không chồng lấn
 
 ### Giai đoạn 4: Vận hành
-- [ ] Chỉ số điện nước: `POST /api/rooms/{roomId}/meter-readings` (S; chỉ số mới ≥ cũ trừ khi thay đồng hồ), `GET /api/rooms/{roomId}/meter-readings` (S)
-- [ ] `GET /api/meter-readings/missing?month=yyyy-MM` (S): các phòng đang có người ở nhưng chưa ghi chỉ số tháng đó
-- [ ] Bảo trì: `POST /api/maintenance-requests` (C với phòng mình đang thuê, S), `GET /api/maintenance-requests` (S; lọc `status`, `roomId`), `GET /api/maintenance-requests/me` (C)
-- [ ] `POST /api/maintenance-requests/{id}/start`, `POST /api/maintenance-requests/{id}/complete` (S)
-- [ ] Job `ExpireReservationsJob` (`BackgroundService`, chạy mỗi phút): `Reservation.TryExpire`, trả phòng về `Available`
-- [ ] Job `ExpireContractsJob` (chạy mỗi ngày 00:05 giờ VN): `Contract.TryExpire`; nếu có hợp đồng gia hạn Draft bắt đầu đúng ngày đó thì tự `Activate` (phòng giữ `Occupied`, không check-out); nếu không thì chờ check-out
-- [ ] `AuditSaveChangesInterceptor`: ghi `AuditLog` (ai, lúc nào, giá trị cũ/mới) cho Room, Contract, Reservation, Tenant, MaintenanceRequest
-- [ ] `GET /api/audit-logs` (A; lọc `entityName`, `entityId`, `userId`, khoảng ngày)
+- [x] Chỉ số điện nước: `POST /api/rooms/{roomId}/meter-readings` (S; chỉ số mới ≥ cũ trừ khi thay đồng hồ, tháng đã có chỉ số thì 409 `DUPLICATE` chứ không ghi đè), `GET /api/rooms/{roomId}/meter-readings` (S)
+- [x] `GET /api/meter-readings/missing?month=yyyy-MM` (S): các phòng đang có người ở nhưng chưa ghi chỉ số tháng đó ("có người ở" = có hợp đồng không phải Draft chiếm khoảng `[StartDate, EndDate)` giao với tháng)
+- [x] Bảo trì: `POST /api/maintenance-requests` (C với phòng mình đang thuê, S), `GET /api/maintenance-requests` (S; lọc `status`, `roomId`), `GET /api/maintenance-requests/{id}` (S hoặc người liên quan), `GET /api/maintenance-requests/me` (C)
+- [x] `POST /api/maintenance-requests/{id}/start`, `POST /api/maintenance-requests/{id}/complete` (S)
+- [x] Job `ExpireReservationsJob` (`BackgroundService`, chạy mỗi phút): `Reservation.TryExpire`, trả phòng về `Available`
+- [x] Job `ExpireContractsJob` (chạy mỗi ngày 00:05 giờ VN): `Contract.TryExpire`; nếu có hợp đồng gia hạn Draft bắt đầu đúng ngày đó thì tự `Activate` (phòng giữ `Occupied`, không check-out); nếu không thì chờ check-out
+- [x] `AuditSaveChangesInterceptor`: ghi `AuditLog` (ai, lúc nào, giá trị cũ/mới) cho Room, Contract, Reservation, Tenant, MaintenanceRequest
+- [x] `GET /api/audit-logs` (A; lọc `entityName`, `entityId`, `userId`, khoảng ngày)
 
 ### Giai đoạn 5: Dashboard và báo cáo
 - [ ] `GET /api/dashboard/summary` (S): số phòng theo trạng thái
