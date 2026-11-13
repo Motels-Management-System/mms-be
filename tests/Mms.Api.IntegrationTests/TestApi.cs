@@ -132,6 +132,16 @@ public sealed class TestApi
     }
 
     /// <summary>
+    /// Gọi thẳng service trong DI của host. Background job không chạy ở môi trường Testing
+    /// nên test logic hết hạn dùng cách này, không phải chờ timer.
+    /// </summary>
+    public async Task<T> InServicesAsync<T>(Func<IServiceProvider, Task<T>> action)
+    {
+        using var scope = _factory!.Services.CreateScope();
+        return await action(scope.ServiceProvider);
+    }
+
+    /// <summary>
     /// Tạo loại phòng + phòng + hợp đồng đang hiệu lực với một người đại diện,
     /// phục vụ các test cần hợp đồng hiện tại (endpoint hợp đồng thuộc Giai đoạn 3).
     /// </summary>

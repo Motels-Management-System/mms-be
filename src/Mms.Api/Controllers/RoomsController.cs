@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mms.Application.Abstractions.Messaging;
 using Mms.Application.Common;
+using Mms.Application.Features.MeterReadings.Commands;
+using Mms.Application.Features.MeterReadings.Dtos;
+using Mms.Application.Features.MeterReadings.Queries;
 using Mms.Application.Features.Rooms.Commands;
 using Mms.Application.Features.Rooms.Dtos;
 using Mms.Application.Features.Rooms.Queries;
@@ -118,6 +121,36 @@ public class RoomsController : ControllerBase
         await handler.HandleAsync(command, ct);
         return NoContent();
     }
+
+    [HttpPost("{roomId:guid}/meter-readings")]
+    [Authorize(Roles = "Admin,Staff")]
+    [ProducesResponseType(typeof(MeterReadingDto), StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateMeterReading(
+        [FromRoute] Guid roomId,
+        [FromBody] CreateMeterReadingRequest request,
+        [FromServices] ICommandHandler<CreateMeterReadingCommand, MeterReadingDto> handler,
+        CancellationToken ct)
+    {
+        var command = new CreateMeterReadingCommand(
+            roomId, request.PeriodMonth, request.Electricity, request.Water, request.IsMeterReplaced);
+        var result = await handler.HandleAsync(command, ct);
+        return CreatedAtAction(nameof(GetMeterReadings), new { roomId }, result);
+    }
+
+    [HttpGet("{roomId:guid}/meter-readings")]
+    [Authorize(Roles = "Admin,Staff")]
+    [ProducesResponseType(typeof(PagedResult<MeterReadingDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMeterReadings(
+        [FromRoute] Guid roomId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromServices] IQueryHandler<GetMeterReadingsQuery, PagedResult<MeterReadingDto>> handler = default!,
+        CancellationToken ct = default)
+    {
+        var query = new GetMeterReadingsQuery(roomId, page, pageSize);
+        var result = await handler.HandleAsync(query, ct);
+        return Ok(result);
+    }
 }
 
 public sealed record CreateRoomRequest(
@@ -136,3 +169,9 @@ public sealed record UpdateRoomAmenitiesRequest(
 
 public sealed record ChangeRoomStatusRequest(
     RoomStatus Status);
+
+public sealed record CreateMeterReadingRequest(
+    DateOnly PeriodMonth,
+    decimal Electricity,
+    decimal Water,
+    bool IsMeterReplaced = false);
