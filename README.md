@@ -5,9 +5,9 @@ motels management system apis
 
 | Bộ test | Kết quả |
 |---|---|
-| `Mms.Domain.UnitTests` | 59 passed |
-| `Mms.Application.UnitTests` | 40 passed |
-| `Mms.Api.IntegrationTests` (Testcontainers PostgreSQL thật) | 57 passed |
+| `Mms.Domain.UnitTests` | 76 passed |
+| `Mms.Application.UnitTests` | 49 passed |
+| `Mms.Api.IntegrationTests` (Testcontainers PostgreSQL thật) | 102 passed |
 
 ### Test concurrency 50 request song song
 

@@ -91,7 +91,7 @@ tests/
   `ICommandHandler<TCommand, TResult>` và `IQueryHandler<TQuery, TResult>` với `Task<TResult> HandleAsync(TRequest, CancellationToken)`. Đăng ký tự động bằng quét assembly trong `AddApplication()` (viết khi làm use case đầu tiên). Controller inject trực tiếp handler cần dùng.
 - Mỗi command có `AbstractValidator<T>`; handler gọi `await validator.ValidateAndThrowAsync(command, ct)` đầu tiên. Ngoại lệ: command nội bộ của background job không có dữ liệu người dùng nên không cần validator.
 - Truy vấn đọc dùng `AsNoTracking()` và `Select` thẳng sang DTO (không `Include` rồi map thủ công).
-- Truy vấn báo cáo phức tạp (`generate_series`, window function) viết SQL thuần trong `Infrastructure/Reports` bằng `Database.SqlQuery<T>`, expose qua interface `IReportQueries` ở Application.
+- Truy vấn báo cáo phức tạp (`generate_series`, window function) viết SQL thuần trong `Infrastructure/Reports` bằng `Database.SqlQueryRaw<T>(sql, parameters)`, expose qua interface `IReportQueries` ở Application. **Không dùng chuỗi nội suy C# cho SQL**: overload nhận `string` sẽ nối giá trị thẳng vào câu lệnh (không tham số hoá, Postgres báo `cannot cast type integer to date`); truyền `NpgsqlParameter` với `NpgsqlDbType.Date` cho mốc ngày.
 - Cấu hình nghiệp vụ lấy từ `IOptions<RentalOptions>` (mục 8), không hardcode.
 
 ### 5.5 Dữ liệu và EF Core
@@ -174,13 +174,13 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [x] `GET /api/audit-logs` (A; lọc `entityName`, `entityId`, `userId`, khoảng ngày)
 
 ### Giai đoạn 5: Dashboard và báo cáo
-- [ ] `GET /api/dashboard/summary` (S): số phòng theo trạng thái
-- [ ] `GET /api/dashboard/rooms` (S): lưới phòng kèm người thuê hiện tại, `daysRemaining`, `expiryLevel`
-- [ ] `GET /api/dashboard/expiring-contracts?days=30` (S): hợp đồng sắp hết hạn, sắp theo ngày còn lại
-- [ ] `GET /api/reports/occupancy?from=&to=&groupBy=month|roomType` (A): tỷ lệ lấp đầy = số ngày-phòng có người ở / (số phòng × số ngày); dùng `generate_series`
-- [ ] `GET /api/reports/vacancy-duration?from=&to=` (A): số ngày trống trung bình giữa 2 hợp đồng liên tiếp của một phòng (window function `LEAD`)
-- [ ] `GET /api/reports/forecast?days=30|60|90` (A): phòng sẽ trống trong N ngày tới (hợp đồng kết thúc, chưa có gia hạn)
-- [ ] `GET /api/reports/renewal-rate?from=&to=` (A): tỷ lệ gia hạn và tỷ lệ quay vòng (turnover)
+- [x] `GET /api/dashboard/summary` (S): số phòng theo trạng thái
+- [x] `GET /api/dashboard/rooms` (S): lưới phòng kèm người thuê hiện tại, `daysRemaining`, `expiryLevel`
+- [x] `GET /api/dashboard/expiring-contracts?days=30` (S): hợp đồng sắp hết hạn, sắp theo ngày còn lại
+- [x] `GET /api/reports/occupancy?from=&to=&groupBy=month|roomType` (A): tỷ lệ lấp đầy = số ngày-phòng có người ở / (số phòng × số ngày); dùng `generate_series`
+- [x] `GET /api/reports/vacancy-duration?from=&to=` (A): số ngày trống trung bình giữa 2 hợp đồng liên tiếp của một phòng (window function `LEAD`)
+- [x] `GET /api/reports/forecast?days=30|60|90` (A): phòng sẽ trống trong N ngày tới (hợp đồng kết thúc, chưa có gia hạn)
+- [x] `GET /api/reports/renewal-rate?from=&to=` (A): tỷ lệ gia hạn và tỷ lệ quay vòng (turnover)
 
 ### Giai đoạn 6: Chất lượng và đóng gói
 - [ ] Seed dữ liệu mẫu bằng Bogus (chỉ môi trường Development): ~100 phòng, vài loại phòng, tiện nghi, vài nghìn hợp đồng không chồng lấn
@@ -189,7 +189,7 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [ ] `Dockerfile` cho API, mở rộng `docker-compose.yml` chạy cả API + PostgreSQL
 - [ ] GitHub Actions: build + test mỗi lần push
 - [ ] README: ERD, sơ đồ kiến trúc, GIF demo, mục "quyết định kỹ thuật và vì sao"
-- [ ] Deploy bản demo (Render/Railway/Fly.io)
+- [ ] Deploy bản demo (Render)
 - [ ] (Tùy chọn, sau cùng) email xác nhận bằng MailKit, ảnh phòng, xuất Excel báo cáo
 
 ## 7. Màn hình frontend
