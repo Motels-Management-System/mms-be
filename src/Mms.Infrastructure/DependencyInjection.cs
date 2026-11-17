@@ -9,6 +9,7 @@ using Mms.Application.Abstractions;
 using Mms.Infrastructure.Identity;
 using Mms.Infrastructure.Persistence;
 using Mms.Infrastructure.Persistence.Interceptors;
+using Mms.Infrastructure.Reports;
 using Mms.Infrastructure.Services;
 
 namespace Mms.Infrastructure;
@@ -34,6 +35,9 @@ public static class DependencyInjection
         });
         services.AddScoped<AuditSaveChangesInterceptor>();
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        // Báo cáo SQL thuần
+        services.AddScoped<IReportQueries, ReportQueries>();
 
         // ASP.NET Identity
         services
