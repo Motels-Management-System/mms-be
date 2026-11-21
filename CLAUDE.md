@@ -183,13 +183,13 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [x] `GET /api/reports/renewal-rate?from=&to=` (A): tỷ lệ gia hạn và tỷ lệ quay vòng (turnover)
 
 ### Giai đoạn 6: Chất lượng và đóng gói
-- [ ] Seed dữ liệu mẫu bằng Bogus (chỉ môi trường Development): ~50 phòng, vài loại phòng, tiện nghi, vài nghìn hợp đồng không chồng lấn
-- [ ] Đo `EXPLAIN ANALYZE` trước/sau khi thêm index, ghi số liệu vào README
-- [ ] Health check `/health` (kiểm tra kết nối DB)
-- [ ] `Dockerfile` cho API, mở rộng `docker-compose.yml` chạy cả API + PostgreSQL
-- [ ] GitHub Actions: build + test mỗi lần push
-- [ ] README: ERD, sơ đồ kiến trúc, GIF demo, mục "quyết định kỹ thuật và vì sao"
-- [ ] Deploy bản demo (Render)
+- [x] Seed dữ liệu mẫu bằng Bogus (chỉ môi trường Development): ~50 phòng, vài loại phòng, tiện nghi, vài nghìn hợp đồng không chồng lấn
+- [x] Đo `EXPLAIN ANALYZE` trước/sau khi thêm index, ghi số liệu vào README
+- [x] Health check `/health` (kiểm tra kết nối DB)
+- [x] `Dockerfile` cho API, mở rộng `docker-compose.yml` chạy cả API + PostgreSQL
+- [x] GitHub Actions: build + test mỗi lần push
+- [x] README: ERD, sơ đồ kiến trúc, GIF demo, mục "quyết định kỹ thuật và vì sao"
+- [x] Deploy bản demo (Render)
 - [ ] (Tùy chọn, sau cùng) email xác nhận bằng MailKit, ảnh phòng, xuất Excel báo cáo
 
 ## 7. Màn hình frontend

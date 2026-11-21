@@ -1,0 +1,39 @@
+name: CI / Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    name: Build & Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore local .NET tools
+        run: dotnet tool restore
+
+      - name: Restore dependencies
+        run: dotnet restore Mms.sln
+
+      - name: Build solution
+        run: dotnet build Mms.sln --configuration Release --no-restore
+
+      - name: Run Domain Unit Tests
+        run: dotnet test tests/Mms.Domain.UnitTests/Mms.Domain.UnitTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=domain-tests.trx"
+
+      - name: Run Application Unit Tests
+        run: dotnet test tests/Mms.Application.UnitTests/Mms.Application.UnitTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=app-tests.trx"
+
+      - name: Run API Integration Tests (Testcontainers PostgreSQL)
+        run: dotnet test tests/Mms.Api.IntegrationTests/Mms.Api.IntegrationTests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=integration-tests.trx"

@@ -2,14 +2,43 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: mms-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: mms
+      POSTGRES_DB: MotelManagementSystem
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - mms-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d MotelManagementSystem"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mms-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=MotelManagementSystem;Username=postgres;Password=postgres
+      - Jwt__SecretKey=YourSuperSecretKeyMustBeAtLeast32CharsLongForSecurity!
+      - Jwt__Issuer=MMS
+      - Jwt__Audience=MMS
+      - AdminSeed__Email=admin@mms.local
+      - AdminSeed__Password=Admin@123456
+      - RentalOptions__ReservationHoldHours=48
+      - RentalOptions__MinContractMonths=1
+      - RentalOptions__EarlyTerminationNoticeDays=30
 
 volumes:
   mms-pgdata:

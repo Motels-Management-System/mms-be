@@ -1,0 +1,40 @@
+services:
+  # Web API Service
+  - type: web
+    name: mms-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: mms-postgres
+          property: connectionString
+      - key: Jwt__SecretKey
+        generateValue: true
+      - key: Jwt__Issuer
+        value: MMS
+      - key: Jwt__Audience
+        value: MMS
+      - key: AdminSeed__Email
+        value: admin@mms.local
+      - key: AdminSeed__Password
+        value: Admin@123456
+      - key: RentalOptions__ReservationHoldHours
+        value: 48
+      - key: RentalOptions__MinContractMonths
+        value: 1
+      - key: RentalOptions__EarlyTerminationNoticeDays
+        value: 30
+
+databases:
+  # PostgreSQL Database
+  - name: mms-postgres
+    databaseName: MotelManagementSystem
+    user: postgres
+    plan: free
+    region: singapore

@@ -5,6 +5,8 @@ using Mms.Application.Common;
 using Mms.Infrastructure;
 using Mms.Infrastructure.BackgroundJobs;
 using Mms.Infrastructure.Identity;
+using Mms.Infrastructure.Persistence;
+using Mms.Infrastructure.Persistence.SeedData;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -74,6 +76,10 @@ try
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
 
+    // Health Checks: kiểm tra kết nối DB
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<AppDbContext>("database", tags: ["db", "ready"]);
+
     // Integration test chạy ở môi trường Testing và gọi thẳng handler hết hạn,
     // nên background job không đăng ký ở đó (tránh timer can thiệp lúc đang assert).
     if (!builder.Environment.EnvironmentName.Equals("Testing", StringComparison.Ordinal))
@@ -102,15 +108,22 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
+    app.MapHealthChecks("/health");
 
     // Seed roles and default admin if database is reachable
     try
     {
         await IdentitySeeder.SeedAsync(app.Services);
+
+        // Seed development data phong phú bằng Bogus (chỉ môi trường Development)
+        if (app.Environment.IsDevelopment())
+        {
+            await DevelopmentDataSeeder.SeedAsync(app.Services);
+        }
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Chưa thể seed Identity data lúc khởi động (có thể DB chưa khởi động hoặc chưa update migration)");
+        Log.Warning(ex, "Chưa thể seed Identity/Development data lúc khởi động (có thể DB chưa khởi động hoặc chưa update migration)");
     }
 
     app.Run();
