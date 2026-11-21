@@ -183,7 +183,7 @@ Ký hiệu quyền: `A` = Admin, `S` = Staff, `C` = Customer, `*` = ai cũng g�
 - [x] `GET /api/reports/renewal-rate?from=&to=` (A): tỷ lệ gia hạn và tỷ lệ quay vòng (turnover)
 
 ### Giai đoạn 6: Chất lượng và đóng gói
-- [ ] Seed dữ liệu mẫu bằng Bogus (chỉ môi trường Development): ~100 phòng, vài loại phòng, tiện nghi, vài nghìn hợp đồng không chồng lấn
+- [ ] Seed dữ liệu mẫu bằng Bogus (chỉ môi trường Development): ~50 phòng, vài loại phòng, tiện nghi, vài nghìn hợp đồng không chồng lấn
 - [ ] Đo `EXPLAIN ANALYZE` trước/sau khi thêm index, ghi số liệu vào README
 - [ ] Health check `/health` (kiểm tra kết nối DB)
 - [ ] `Dockerfile` cho API, mở rộng `docker-compose.yml` chạy cả API + PostgreSQL
