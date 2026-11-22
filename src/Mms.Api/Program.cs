@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Mms.Api.Middleware;
 using Mms.Application;
@@ -23,6 +24,17 @@ try
         .ReadFrom.Configuration(ctx.Configuration)
         .WriteTo.Console()
         .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day));
+
+    // CORS cho phép frontend (Vite/React) gọi API từ mọi origin
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    });
 
     // Controllers
     builder.Services.AddControllers()
@@ -93,37 +105,58 @@ try
     // Middleware pipeline
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
+    app.UseCors();
 
-    if (app.Environment.IsDevelopment())
+    // Bật Swagger ở Development hoặc khi có cấu hình EnableSwagger (mặc định bật để xem demo trên Render)
+    if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableSwagger", true))
     {
         app.UseSwagger();
         app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "MMS API v1"));
     }
 
     // Profile http chỉ bind một endpoint nên không có cổng https để chuyển hướng tới.
-    if (!app.Environment.IsDevelopment())
+    if (!app.Environment.IsDevelopment() && !string.Equals(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"), "true", StringComparison.OrdinalIgnoreCase))
     {
         app.UseHttpsRedirection();
     }
+
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
     app.MapHealthChecks("/health");
 
-    // Seed roles and default admin if database is reachable
+    // 1. Tự động kiểm tra và áp dụng Migration khi khởi động (chỉ chạy khi không phải môi trường Testing)
+    if (!app.Environment.EnvironmentName.Equals("Testing", StringComparison.Ordinal))
+    {
+        using var scope = app.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        try
+        {
+            Log.Information("Đang kiểm tra và áp dụng Database Migrations...");
+            await dbContext.Database.MigrateAsync();
+            Log.Information("Áp dụng Database Migrations thành công.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Không thể áp dụng Database Migrations lúc khởi động. Vui lòng kiểm tra chuỗi kết nối Database.");
+            throw;
+        }
+    }
+
+    // 2. Seed roles và tài khoản default admin
     try
     {
         await IdentitySeeder.SeedAsync(app.Services);
 
-        // Seed development data phong phú bằng Bogus (chỉ môi trường Development)
-        if (app.Environment.IsDevelopment())
+        // 3. Seed development data phong phú bằng Bogus (chỉ môi trường Development hoặc khi bật SeedDevelopmentData)
+        if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("SeedDevelopmentData", false))
         {
             await DevelopmentDataSeeder.SeedAsync(app.Services);
         }
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Chưa thể seed Identity/Development data lúc khởi động (có thể DB chưa khởi động hoặc chưa update migration)");
+        Log.Warning(ex, "Chưa thể seed Identity/Development data lúc khởi động");
     }
 
     app.Run();
