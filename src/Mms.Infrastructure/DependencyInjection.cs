@@ -11,6 +11,7 @@ using Mms.Infrastructure.Persistence;
 using Mms.Infrastructure.Persistence.Interceptors;
 using Mms.Infrastructure.Reports;
 using Mms.Infrastructure.Services;
+using Npgsql;
 
 namespace Mms.Infrastructure;
 
@@ -18,7 +19,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var rawConnectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? configuration.GetConnectionString("Default")
+            ?? configuration["DATABASE_URL"];
+
+        var connectionString = NormalizeConnectionString(rawConnectionString);
 
         // DateTimeProvider
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
@@ -44,16 +49,20 @@ public static class DependencyInjection
             .AddIdentityCore<ApplicationUser>(options =>
             {
                 options.User.RequireUniqueEmail = true;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequiredLength = 8;
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
 
-        // JWT
+        // JWT Authentication
         var jwtSection = configuration.GetSection(JwtOptions.SectionName);
         services.Configure<JwtOptions>(jwtSection);
-        var jwtOptions = jwtSection.Get<JwtOptions>()!;
+        var jwtOptions = jwtSection.Get<JwtOptions>() ?? new JwtOptions();
 
         services
             .AddAuthentication(options =>
@@ -84,5 +93,42 @@ public static class DependencyInjection
         services.AddScoped<IIdentityService, IdentityService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Chuyển đổi chuỗi kết nối PostgreSQL: hỗ trợ cả định dạng URI (postgres://... của Render, Railway, Supabase)
+    /// lẫn định dạng chuẩn Key=Value của ADO.NET (Host=...;Port=5432;Database=...).
+    /// </summary>
+    private static string NormalizeConnectionString(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+
+        var cleaned = raw.Trim().Trim('"', '\'');
+
+        if (cleaned.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+            cleaned.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        {
+            var uri = new Uri(cleaned);
+            var userInfo = uri.UserInfo.Split(':');
+            var user = Uri.UnescapeDataString(userInfo[0]);
+            var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 5432;
+            var database = uri.AbsolutePath.TrimStart('/');
+
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = host,
+                Port = port,
+                Database = database,
+                Username = user,
+                Password = password,
+                SslMode = SslMode.Prefer
+            };
+
+            return builder.ConnectionString;
+        }
+
+        return cleaned;
     }
 }
