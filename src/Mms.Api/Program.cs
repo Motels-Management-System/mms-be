@@ -125,6 +125,9 @@ try
     app.MapControllers();
     app.MapHealthChecks("/health");
 
+    // Tự động chuyển hướng từ trang chủ "/" sang "/swagger" để tiện xem API
+    app.MapGet("/", () => Results.Redirect("/swagger"));
+
     // 1. Tự động kiểm tra và áp dụng Migration khi khởi động (chỉ chạy khi không phải môi trường Testing)
     if (!app.Environment.EnvironmentName.Equals("Testing", StringComparison.Ordinal))
     {
